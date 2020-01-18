@@ -8,13 +8,16 @@ ROOM_BP = Blueprint('room', __name__, url_prefix='/rooms')
 
 @ROOM_BP.route('/', methods=['GET'])
 def get_rooms():
-    lat = float(request.args.get('lat'))
-    lon = float(request.args.get('lon'))
+    lat = request.args.get('lat')
+    lon = request.args.get('lon')
 
     if not lat or not lon:
         return 400
 
-    rooms = Room.objects(location__near=[lat, lon], location__max_distance=500)
+    rooms = Room.objects(
+        location__near=[float(lat), float(lon)],
+        location__max_distance=500
+    )
 
     rooms_ret = {
         str(i.id): {
