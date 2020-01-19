@@ -23,7 +23,7 @@ def get_rooms():
     else:
         room_args = {
             'location__near': [float(lon), float(lat)],
-            'location__max_distance': 500
+            'location__max_distance': 100
         }
 
     if radius:
