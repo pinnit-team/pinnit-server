@@ -99,6 +99,8 @@ def generate_sockets(socketio):
             user = User(username=username)
             user.save()
 
+        message_history = Message.objects(room=room)
+
         join_room(room)
 
         send(
@@ -106,6 +108,17 @@ def generate_sockets(socketio):
                 'userId': str(user.id),
                 'token': str(user.token),
                 'room': str(room_check.name),
+                'history': [
+                    {
+                        'from': {
+                            'id': str(user.id),
+                            'username': user.username
+                        },
+                        'msg': message,
+                        'attachment': attachment,
+                        'timestamp': message.timestamp
+                    } for i in message_history
+                ],
                 'err': None
             },
             json=True
