@@ -1,4 +1,4 @@
-from time import time
+import datetime
 from html import escape
 
 from flask import current_app, Blueprint, make_response, jsonify, request
@@ -39,7 +39,7 @@ def get_rooms():
                 'id': str(room.id),
                 'name': room.name,
                 'loc': room.location.get('coordinates'),
-                'users': [{'latitude': i.location.get('latitude'), 'longitude': i.location.get('longitude')} for i in messages.order_by('-timestamp').distinct('user')],
+                'users': [i.location.get('coordinates') for i in Message.objects(room=room).order_by('-timestamp')],
                 'messages': len(messages)
             }
         )
@@ -87,6 +87,8 @@ def generate_sockets(socketio):
         room = json.get('room')
         token = json.get('token')
 
+        print(json)
+
         try:
             room_check = Room.objects.get(id=room)
 
@@ -120,12 +122,11 @@ def generate_sockets(socketio):
                 'history': [
                     {
                         'from': {
-                            'id': str(user.id),
-                            'username': user.username
+                            'id': str(i.user.id),
+                            'username': i.user.username
                         },
-                        'msg': message,
-                        'attachment': attachment,
-                        'timestamp': message.timestamp
+                        'msg': i.message,
+                        'timestamp': str(i.timestamp)
                     } for i in message_history.order_by('+timestamp')
                 ],
                 'err': None
@@ -141,7 +142,7 @@ def generate_sockets(socketio):
                     'username': user.username
                 },
                 'msg': username + ' has entered the room.',
-                'timestamp': time()
+                'timestamp': str(datetime.datetime.now())
             },
             json=True,
             room=room
@@ -153,6 +154,8 @@ def generate_sockets(socketio):
         room = json.get('room')
         token = json.get('token')
 
+        print(json)
+
         try:
             user = User.objects.get(token=token)
             leave_room(room)
@@ -163,7 +166,7 @@ def generate_sockets(socketio):
                         'username': user.username
                     },
                     'msg': user.name + ' has left the room',
-                    'timestamp': time()
+                    'timestamp': str(datetime.datetime.now())
                 },
                 json=True,
                 room=room
@@ -176,20 +179,21 @@ def generate_sockets(socketio):
     @socketio.on('sendmsg')
     def on_msg(json):
         token = json.get('token')
-        room = json.get('room')
+        room = json.get('roomId')
         message = json.get('msg')
-        attachment = json.get('attachment')
         location = json.get('location')
+
+        print(json)
 
         try:
             user = User.objects.get(token=token)
             room = Room.objects.get(id=room)
 
+            print(escape(message[:500]))
             message = Message(
                 user=user,
                 room=room,
                 message=escape(message[:500]),
-                attachment=attachment,
                 location=[
                     float(location.get('longitude')),
                     float(location.get('latitude'))
@@ -204,11 +208,10 @@ def generate_sockets(socketio):
                         'id': str(user.id),
                         'username': user.username
                     },
-                    'msg': message,
-                    'attachment': attachment,
-                    'timestamp': message.timestamp
+                    'msg': message.message,
+                    'timestamp': str(message.timestamp)
                 },
-                room=room,
+                room=str(room.id),
                 json=True
             )
 
