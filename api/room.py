@@ -153,12 +153,19 @@ def generate_sockets(socketio):
         token = data.get('token')
         room = data.get('room')
         message = data.get('msg')
+        attachment = data.get('attachment')
 
         try:
             user = User.objects.get(token=token)
             room = Room.objects.get(id=room)
 
-            message = Message(user=user, room=room, message=message)
+            message = Message(
+                user=user,
+                room=room,
+                message=message,
+                attachment=attachment
+            )
+            message.save()
 
             emit(
                 'sendmsg',
@@ -168,6 +175,7 @@ def generate_sockets(socketio):
                         'username': user.username
                     },
                     'msg': message,
+                    'attachment': attachment,
                     'timestamp': message.timestamp
                 },
                 room=room
