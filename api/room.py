@@ -15,15 +15,16 @@ def get_rooms():
         return 400
 
     rooms = Room.objects(
-        location__near=[float(lat), float(lon)],
+        location__near=[float(lon), float(lat)],
         location__max_distance=500
     )
 
-    rooms_ret = {
-        str(i.id): {
-            'name': i.name, 'loc': i.location.get('coordinates')
+    rooms_ret = [
+        {'id': str(i.id),
+         'name': i.name,
+         'loc': i.location.get('coordinates')
         } for i in rooms
-    }
+    ]
 
     return make_response(jsonify(rooms_ret), 200)
 
@@ -38,7 +39,7 @@ def create_room():
 
     if name and lat and lon:
         # create room
-        new_room = Room(name=name, location=[lat, lon])
+        new_room = Room(name=name, location=[lon, lat])
         new_room.save()
 
         return make_response(
