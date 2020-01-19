@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pinchat-deployment
+  labels:
+    app: pinchat-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pinchat-server
+  template:
+    metadata:
+      labels:
+        app: pinchat-server
+    spec:
+      containers:
+      - name: pinchat-server
+        image: chancen439/pinchat-server:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+      - name: pinchat-db
+        image: mongo
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 27017
