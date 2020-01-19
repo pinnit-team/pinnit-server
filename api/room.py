@@ -1,4 +1,5 @@
 from time import time
+from html import escape
 
 from flask import current_app, Blueprint, make_response, jsonify, request
 from flask_socketio import join_room, leave_room, send, emit
@@ -38,7 +39,7 @@ def get_rooms():
                 'id': str(room.id),
                 'name': room.name,
                 'loc': room.location.get('coordinates'),
-                'users': len(messages.distinct('user')),
+                'users': [{'latitude': i.location.get('latitude'), 'longitude': i.location.get('longitude')} for i in messages.order_by('-timestamp').distinct('user')],
                 'messages': len(messages)
             }
         )
@@ -56,7 +57,7 @@ def create_room():
 
     if name and lat and lon:
         # create room
-        new_room = Room(name=name, location=[lon, lat])
+        new_room = Room(name=escape(name[:20]), location=[lon, lat])
         new_room.save()
 
         return make_response(
@@ -104,14 +105,14 @@ def generate_sockets(socketio):
             if not username or username == 'SERVER':
                 return send({'err': 'invalid username'}, json=True)
 
-            user = User(username=username)
+            user = User(username=escape(username[:20]))
             user.save()
 
         message_history = Message.objects(room=room)
 
         join_room(room)
 
-        emit('join',
+        emit('join-private',
             {
                 'userId': str(user.id),
                 'token': str(user.token),
@@ -125,7 +126,7 @@ def generate_sockets(socketio):
                         'msg': message,
                         'attachment': attachment,
                         'timestamp': message.timestamp
-                    } for i in message_history
+                    } for i in message_history.order_by('+timestamp')
                 ],
                 'err': None
             },
@@ -140,7 +141,7 @@ def generate_sockets(socketio):
                     'username': user.username
                 },
                 'msg': username + ' has entered the room.',
-                'timestamp': time.time()
+                'timestamp': time()
             },
             json=True,
             room=room
@@ -162,8 +163,9 @@ def generate_sockets(socketio):
                         'username': user.username
                     },
                     'msg': user.name + ' has left the room',
-                    'timestamp': time.time()
+                    'timestamp': time()
                 },
+                json=True,
                 room=room
             )
 
@@ -177,6 +179,7 @@ def generate_sockets(socketio):
         room = json.get('room')
         message = json.get('msg')
         attachment = json.get('attachment')
+        location = json.get('location')
 
         try:
             user = User.objects.get(token=token)
@@ -185,8 +188,12 @@ def generate_sockets(socketio):
             message = Message(
                 user=user,
                 room=room,
-                message=message,
-                attachment=attachment
+                message=escape(message[:500]),
+                attachment=attachment,
+                location=[
+                    float(location.get('longitude')),
+                    float(location.get('latitude'))
+                ]
             )
             message.save()
 
@@ -201,7 +208,8 @@ def generate_sockets(socketio):
                     'attachment': attachment,
                     'timestamp': message.timestamp
                 },
-                room=room
+                room=room,
+                json=True
             )
 
         except DoesNotExist:

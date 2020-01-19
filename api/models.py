@@ -23,6 +23,7 @@ class Message(Document):
         thumbnail_size=(100, 100, False),
         collection_name='images'
     )
+    location = PointField()
 
 
 class User(Document):
