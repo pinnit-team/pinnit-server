@@ -1,5 +1,5 @@
 from uuid import uuid4
-import time
+import datetime
 
 from mongoengine import Document
 from mongoengine.fields import UUIDField, StringField, PointField, ImageField
@@ -17,16 +17,11 @@ class Message(Document):
     user = ReferenceField('User')
     room = ReferenceField('Room')
     message = StringField(max_length=500, required=True)
-    timestamp = DateTimeField(required=True, default=lambda: time.time())
-    attachment = ImageField(
-        size=(1920, 1080, True),
-        thumbnail_size=(100, 100, False),
-        collection_name='images'
-    )
+    timestamp = DateTimeField(required=True, default=lambda: datetime.datetime.now())
     location = PointField()
 
 
 class User(Document):
     id = UUIDField(primary_key=True, default=lambda: uuid4())
-    username = StringField(max_length=20, default=lambda: time.time())
+    username = StringField(max_length=20, default=lambda: datetime.datetime.now())
     token = UUIDField(default=lambda: uuid4())
