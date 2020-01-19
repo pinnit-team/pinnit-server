@@ -1,7 +1,7 @@
 from time import time
 
 from flask import current_app, Blueprint, make_response, jsonify, request
-from flask_socketio import join_room, leave_room
+from flask_socketio import join_room, leave_room, send, emit
 from mongoengine.errors import DoesNotExist
 
 from .models import Room, User, Message
@@ -63,6 +63,7 @@ def create_room():
             jsonify(
                 {'room':
                     {'name': new_room.name,
+                     'id': str(new_room.id),
                      'location': new_room.location
                     },
                  'err': None
@@ -80,15 +81,16 @@ def create_room():
 
 def generate_sockets(socketio):
     @socketio.on('join')
-    def on_join(data):
-        username = data.get('username')
-        room = data.get('room')
+    def on_join(json):
+        username = json.get('username')
+        room = json.get('room')
+        token = json.get('token')
 
         try:
             room_check = Room.objects.get(id=room)
 
         except DoesNotExist:
-            return send({'err': 'room does not exist'}, json=True)
+            return emit('join', {'err': 'room does not exist'}, broadcast=False)
 
         if token:
             try:
@@ -109,7 +111,7 @@ def generate_sockets(socketio):
 
         join_room(room)
 
-        send(
+        emit('join',
             {
                 'userId': str(user.id),
                 'token': str(user.token),
@@ -127,10 +129,11 @@ def generate_sockets(socketio):
                 ],
                 'err': None
             },
-            json=True
+            broadcast=False
         )
 
-        send(
+        emit(
+            'join',
             {
                 'user': {
                     'id': str(user.id),
@@ -143,10 +146,11 @@ def generate_sockets(socketio):
             room=room
         )
 
+
     @socketio.on('leave')
-    def on_leave(data):
-        room = data.get('room')
-        token = data.get('token')
+    def on_leave(json):
+        room = json.get('room')
+        token = json.get('token')
 
         try:
             user = User.objects.get(token=token)
@@ -168,11 +172,11 @@ def generate_sockets(socketio):
 
 
     @socketio.on('sendmsg')
-    def on_msg(data):
-        token = data.get('token')
-        room = data.get('room')
-        message = data.get('msg')
-        attachment = data.get('attachment')
+    def on_msg(json):
+        token = json.get('token')
+        room = json.get('room')
+        message = json.get('msg')
+        attachment = json.get('attachment')
 
         try:
             user = User.objects.get(token=token)
