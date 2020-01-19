@@ -4,7 +4,7 @@ from flask import current_app, Blueprint, make_response, jsonify, request
 from flask_socketio import join_room, leave_room
 from mongoengine.errors import DoesNotExist
 
-from .models import Room, User
+from .models import Room, User, Message
 
 
 ROOM_BP = Blueprint('room', __name__, url_prefix='/rooms')
@@ -30,12 +30,18 @@ def get_rooms():
 
     rooms = Room.objects(**room_args)
 
-    rooms_ret = [
-        {'id': str(i.id),
-         'name': i.name,
-         'loc': i.location.get('coordinates')
-        } for i in rooms
-    ]
+    rooms_ret = []
+    for room in rooms:
+        messages = Message.objects(room=room)
+        rooms_ret.append(
+            {
+                'id': str(room.id),
+                'name': room.name,
+                'loc': room.location.get('coordinates'),
+                'users': len(messages.distinct('user')),
+                'messages': len(messages)
+            }
+        )
 
     return make_response(jsonify(rooms_ret), 200)
 
