@@ -11,7 +11,7 @@ MarkupSafe==1.1.1
 mccabe==0.6.1
 mongoengine==0.19.1
 monotonic==1.5
-Pillow==7.0.0
+Pillow==9.3.0
 pycodestyle==2.5.0
 pydocstyle==5.0.2
 pyflakes==2.1.1
